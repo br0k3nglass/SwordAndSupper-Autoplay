@@ -166,7 +166,7 @@
     }
 
     function clickFirstMission() {
-        $(".mission-link").first().click();
+        $(".mission-link").click();
     }
 
     // the main auto-clicking loop (runs every 1 second)
