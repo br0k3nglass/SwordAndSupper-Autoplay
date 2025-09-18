@@ -126,30 +126,51 @@
     // end of setTimeout chain functions
 
     // haven't tested this yet but it might be useful for clicking the Start Mission button on the reddit page
-    function findAndClickStartMission() {
-        // Find all potential containers
-        $('devvit-post-consume-tracker').each(function() {
-            const loader = this.querySelector('shreddit-devvit-ui-loader');
-            if (!loader?.shadowRoot) return true; // continue
-            
-            const surface = loader.shadowRoot.querySelector('devvit-surface');
-            if (!surface?.shadowRoot) return true;
-            
-            const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
-            if (!renderer?.shadowRoot) return true;
-            
-            // Use jQuery in the final shadow root
-            const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
-            
-            if ($target.length) {
-                $target
-                    .css('border', '2px solid green')
-                    .click(); // jQuery click
-                console.log('Clicked with jQuery!');
-                return false; // break the loop
-            }
-        });
-    }
+function findAndClickStartMission() {
+    console.log('Starting findAndClickStartMission...');
+    
+    // Find all potential containers
+    $('devvit-post-consume-tracker').each(function(index) {
+        console.log(`Checking container #${index}`, this);
+        
+        const loader = this.querySelector('shreddit-devvit-ui-loader');
+        if (!loader?.shadowRoot) {
+            console.log('  No loader or shadowRoot found, skipping...');
+            return true; // continue
+        }
+        console.log('  Found loader with shadowRoot', loader);
+        
+        const surface = loader.shadowRoot.querySelector('devvit-surface');
+        if (!surface?.shadowRoot) {
+            console.log('  No surface or shadowRoot found, skipping...');
+            return true;
+        }
+        console.log('  Found surface with shadowRoot', surface);
+        
+        const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
+        if (!renderer?.shadowRoot) {
+            console.log('  No renderer or shadowRoot found, skipping...');
+            return true;
+        }
+        console.log('  Found renderer with shadowRoot', renderer);
+        
+        // Use jQuery in the final shadow root
+        const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
+        console.log(`  Found ${$target.length} target(s) in renderer shadowRoot`);
+        
+        if ($target.length) {
+            $target
+                .css('border', '2px solid green')
+                .click(); // jQuery click
+            console.log('  Clicked target with jQuery!');
+            return false; // break the loop
+        } else {
+            console.log('  No target found in this renderer.');
+        }
+    });
+    
+    console.log('findAndClickStartMission finished.');
+}
 
     function clickEndMission() {
         const $elements = $(".end-mission-button");
