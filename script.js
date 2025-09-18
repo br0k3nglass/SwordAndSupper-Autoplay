@@ -162,6 +162,11 @@
         } else {
           console.log("⚠️ No matching elements found.");
         }
+        setTimeout(clickFirstMission,500)
+    }
+
+    function clickFirstMission() {
+        $(".mission-link").first().click();
     }
 
     // the main auto-clicking loop (runs every 1 second)
@@ -172,7 +177,6 @@
         $(".continue-button").click();
         // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
         setTimeout(clickEndMission,500)
-        $(".mission-link").first().click();
         //$(".dismiss-button").click();
         //setTimeout(clickInventory, 500);
         setTimeout(startMission, 500);
