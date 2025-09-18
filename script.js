@@ -71,13 +71,24 @@
       $(".mission-create-submit-button").click();
       setTimeout(nameMission, 500);
     }
+
     function startMission() {
-      // Keep trying until found
+      console.log('Starting startMission...');
       let tryCount = 0;
       const interval = setInterval(() => {
         tryCount++;
-        if (findAndClickStartMission() === false || tryCount >= 12) {
+        console.log(`Attempt #${tryCount} to find and click Start Mission...`);
+
+        const result = findAndClickStartMission();
+
+        if (result === false) {
+            console.log('Success: Start Mission was clicked. Stopping attempts.');
             clearInterval(interval);
+        } else if (tryCount >= 12) {
+            console.log('Reached maximum attempts (12). Stopping attempts.');
+            clearInterval(interval);
+        } else {
+            console.log('Start Mission not found yet, will retry in 1 second...');
         }
       }, 1000);
     }
