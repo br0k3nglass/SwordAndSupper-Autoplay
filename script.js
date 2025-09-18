@@ -76,7 +76,7 @@
       let tryCount = 0;
       const interval = setInterval(() => {
         tryCount++;
-        if (ClickStartMission() === false || tryCount >= 12) {
+        if (findAndClickStartMission() === false || tryCount >= 12) {
             clearInterval(interval);
         }
       }, 1000);
@@ -157,7 +157,18 @@
       if (end.length) {
         clearInterval(intervalId);
         $(".continue-button").click();
-        $(".end-mission-button").click();
+        // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
+        const $elements = $(".end-mission-button");
+        if ($elements.length === 1) {
+          $elements.eq(0).click();  // click first (only) one
+          console.log("✅ Clicked the first (only) element!");
+        } else if ($elements.length >= 2) {
+          $elements.eq(1).click();  // click the second one
+          console.log("✅ Clicked the second element out of", $elements.length);
+        } else {
+          console.log("⚠️ No matching elements found.");
+        }
+        //$(".end-mission-button").click();
         $(".mission-link").first().click();
         //$(".dismiss-button").click();
         //setTimeout(clickInventory, 500);
