@@ -67,6 +67,21 @@
       setTimeout(nameMission, 500);
     }
 
+    function clickSubmitYetAgain() {
+      $(".mission-create-submit-button").click();
+      setTimeout(nameMission, 500);
+    }
+    function startMission() {
+      // Keep trying until found
+      let tryCount = 0;
+      const interval = setInterval(() => {
+        tryCount++;
+        if (ClickStartMission() === false || tryCount >= 12) {
+            clearInterval(interval);
+        }
+      }, 1000);
+    }
+
     function nameMission() {
       const spans = $(".mission-create-summary").eq(1).find("span");
       let stars = 0;
@@ -106,9 +121,35 @@
       });
 
       console.log("[Tampermonkey] Value after change:", inputElement.value);
+      setTimeout(clickSubmitYetAgain, 500);
     }
     // end of setTimeout chain functions
 
+    // haven't tested this yet but it might be useful for clicking the Start Mission button on the reddit page
+    function findAndClickStartMission() {
+        // Find all potential containers
+        $('devvit-post-consume-tracker').each(function() {
+            const loader = this.querySelector('shreddit-devvit-ui-loader');
+            if (!loader?.shadowRoot) return true; // continue
+            
+            const surface = loader.shadowRoot.querySelector('devvit-surface');
+            if (!surface?.shadowRoot) return true;
+            
+            const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
+            if (!renderer?.shadowRoot) return true;
+            
+            // Use jQuery in the final shadow root
+            const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
+            
+            if ($target.length) {
+                $target
+                    .css('border', '2px solid green')
+                    .click(); // jQuery click
+                console.log('Clicked with jQuery!');
+                return false; // break the loop
+            }
+        });
+    }
 
     // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
