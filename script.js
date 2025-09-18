@@ -157,8 +157,11 @@
       if (end.length) {
         clearInterval(intervalId);
         $(".continue-button").click();
-        $(".dismiss-button").click();
-        setTimeout(clickInventory, 500);
+        $(".end-mission-button").click();
+        $(".mission-link").first().click();
+        //$(".dismiss-button").click();
+        //setTimeout(clickInventory, 500);
+        setTimeout(startMission, 500);
       }
       $(".skill-button").click();
       $(".skip-button").click();
