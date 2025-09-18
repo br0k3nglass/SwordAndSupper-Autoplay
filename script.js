@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SwordAndSupper Autoplay (No Prompt)
+// @name         SwordAndSupper Autoplay (new flow)
 // @namespace    http://tampermonkey.net/
 // @version      0.0.6
 // @description  Automatically clicks through the map with no user prompt
@@ -151,13 +151,7 @@
         });
     }
 
-    // the main auto-clicking loop (runs every 1 second)
-    function myLoopFunction() {
-      const end = $(".overlay-screen.mission-end-screen");
-      if (end.length) {
-        clearInterval(intervalId);
-        $(".continue-button").click();
-        // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
+    function clickEndMission() {
         const $elements = $(".end-mission-button");
         if ($elements.length === 1) {
           $elements.eq(0).click();  // click first (only) one
@@ -168,7 +162,16 @@
         } else {
           console.log("⚠️ No matching elements found.");
         }
-        //$(".end-mission-button").click();
+    }
+
+    // the main auto-clicking loop (runs every 1 second)
+    function myLoopFunction() {
+      const end = $(".overlay-screen.mission-end-screen");
+      if (end.length) {
+        clearInterval(intervalId);
+        $(".continue-button").click();
+        // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
+        setTimeout(clickEndMission,500)
         $(".mission-link").first().click();
         //$(".dismiss-button").click();
         //setTimeout(clickInventory, 500);
