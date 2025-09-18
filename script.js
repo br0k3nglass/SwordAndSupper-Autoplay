@@ -166,9 +166,14 @@
     }
 
     function clickFirstMission() {
-        $(".mission-link").click();
+        const #div = $(".mission-link-item");
+        if (#div.length) {
+          $div.find("a").first().click();
+          console.log("✅ Clicked the first link inside the div!");
+        } else {
+          console.log("⚠️ Div not found!");
     }
-
+      
     // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
       const end = $(".overlay-screen.mission-end-screen");
