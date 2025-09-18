@@ -166,13 +166,10 @@
     }
 
     function clickFirstMission() {
-        const $div = $(".mission-link-item");
-        $div.css({
-          "background-color": "yellow",
-          "transition": "background-color 0.5s ease"
-        });
-        if ($div.length) {
-          $div.find("a").click();
+        const $div = $(".mission-link-item").first();
+        const link = $div.find("a")[0]; //get raw DOM element for clicking
+        if (link) {
+          link.click();
           console.log("✅ Clicked the link inside the div!");
         } else {
           console.log("⚠️ Div not found!");
