@@ -159,6 +159,7 @@
   function executeAutoplayScript() {
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    // these functions are part of a setTimeout chain used for opening inventory, selecting a map, and creating/naming a new mission
     function clickInventory() {
       $(".navi-bar").find(".image-icon").last().click();
       setTimeout(goToMapTab, 500);
@@ -203,7 +204,7 @@
       $(".mission-create-submit-button").click();
       setTimeout(nameMission, 500);
     }
-
+    
     function nameMission() {
       const spans = $(".mission-create-summary").eq(1).find("span");
       let stars = 0;
@@ -244,31 +245,40 @@
 
       console.log("[Tampermonkey] Value after change:", inputElement.value);
     }
+    // end of setTimeout chain functions
+    
 
+    // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
       const end = $(".overlay-screen.mission-end-screen");
+      // checks if the mission has ended:
+      // if 'end' exists, stops the loop via clearInterval, clicks Continue, and Dismiss, then reopens the inventory to start a new map
       if (end.length) {
         clearInterval(intervalId);
         $(".continue-button").click();
         $(".dismiss-button").click();
         setTimeout(clickInventory, 500);
       }
+      // if the mission is not over, attempt to click these three kinds of buttons automatically to progress through the mission
       $(".skill-button").click();
       $(".skip-button").click();
       $(".advance-button").click();
     }
 
+    // this is the line which triggers the auto-clicker to run every 1 second
     const intervalId = setInterval(myLoopFunction, 1000);
     console.log("Supper Autoplay Script has been started!");
   }
 
   // --- Main Logic ---
   async function main() {
+    // waits until jquery ($) is available, then displays a confirmation dialog (createConfirmDialog())
     if (typeof $ === "undefined") {
       setTimeout(main, 100);
       return;
     }
     const userConfirmed = await createConfirmDialog();
+    // if the user clicks "Start", run the automation logic in executeAutoplayScript()
     if (userConfirmed) {
       console.log("Autoplay Script is started...");
       executeAutoplayScript();
