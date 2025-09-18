@@ -154,10 +154,10 @@
     function clickEndMission() {
         const $elements = $(".end-mission-button");
         if ($elements.length === 1) {
-          $elements.eq(0).click();  // click first (only) one
+          $elements.eq(0).click();//click first (only) one
           console.log("✅ Clicked the first (only) element!");
         } else if ($elements.length >= 2) {
-          $elements.eq(1).click();  // click the second one
+          $elements.eq(1).click();//click the second one
           console.log("✅ Clicked the second element out of", $elements.length);
         } else {
           console.log("⚠️ No matching elements found.");
@@ -166,12 +166,13 @@
     }
 
     function clickFirstMission() {
-        const #div = $(".mission-link-item");
-        if (#div.length) {
+        const $div = $(".mission-link-item");
+        if ($div.length) {
           $div.find("a").first().click();
           console.log("✅ Clicked the first link inside the div!");
         } else {
           console.log("⚠️ Div not found!");
+        }
     }
       
     // the main auto-clicking loop (runs every 1 second)
