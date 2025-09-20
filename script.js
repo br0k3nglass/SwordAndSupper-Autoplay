@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SwordAndSupper Autoplay (Dual Mode)
 // @namespace    http://tampermonkey.net/
-// @version      0.0.7
+// @version      0.0.8
 // @description  Automatically clicks through the map with mode selection
 // @author       u/Aizbaer (original), br0k3nglass (mod), combined by ChatGPT
 // @match        https://*.devvit.net/index.html*
@@ -17,6 +17,10 @@
 
 (function () {
   'use strict';
+
+  // Global variable to control the script execution
+  let isScriptRunning = true;
+  let intervalId = null;
 
   // --- Mode Selection Dialog ---
   function createModeSelectionDialog() {
@@ -368,8 +372,41 @@
       }
     }
 
+    // Function to handle skill button selection with Refuse preference
+    function handleSkillButtons() {
+      const skillButtons = $(".skill-button");
+      if (skillButtons.length === 0) return false;
+      
+      // Try to find the "Refuse" button
+      const refuseButton = skillButtons.filter((index, element) => {
+        return $(element).text().toLowerCase().includes("refuse");
+      });
+      
+      if (refuseButton.length > 0) {
+        // Get the alternative option text
+        const alternativeOptions = skillButtons.not(refuseButton).map((index, element) => {
+          return $(element).text().trim();
+        }).get().join(", ");
+        
+        console.log(`Selected 'Refuse' option. Alternative(s) not selected: ${alternativeOptions}`);
+        refuseButton.click();
+        return true;
+      } else {
+        // If no "Refuse" button found, click the first one
+        console.log("No 'Refuse' option found. Clicking the first skill button.");
+        skillButtons.first().click();
+        return true;
+      }
+    }
+
     // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
+      if (!isScriptRunning) {
+        clearInterval(intervalId);
+        console.log("Script execution stopped by user.");
+        return;
+      }
+      
       const end = $(".overlay-screen.mission-end-screen");
       
       if (end.length) {
@@ -383,16 +420,37 @@
           setTimeout(clickEndMission, 500);
           setTimeout(startMission, 2500);
         }
+        
+        // Restart the interval after handling the end screen
+        intervalId = setInterval(myLoopFunction, 1000);
+        return;
       }
       
-      $(".skill-button").click();
-      $(".skip-button").click();
-      $(".advance-button").click();
+      // Handle skill buttons with Refuse preference
+      const skillButtonClicked = handleSkillButtons();
+      
+      // If no skill button was clicked, proceed with other buttons
+      if (!skillButtonClicked) {
+        $(".skip-button").click();
+        $(".advance-button").click();
+      }
     }
 
+    // Add escape key listener to stop the script
+    function handleEscapeKey(e) {
+      if (e.key === "Escape") {
+        isScriptRunning = false;
+        document.removeEventListener("keydown", handleEscapeKey);
+        console.log("Escape key pressed. Script will stop after current iteration.");
+      }
+    }
+    
+    document.addEventListener("keydown", handleEscapeKey);
+    
     // start the loop
-    const intervalId = setInterval(myLoopFunction, 1000);
+    intervalId = setInterval(myLoopFunction, 1000);
     console.log(`Supper Autoplay Script has been started in ${mode} mode!`);
+    console.log("Press Escape key to stop the script.");
   }
 
   // --- Main Logic ---
