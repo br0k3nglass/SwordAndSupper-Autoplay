@@ -219,6 +219,79 @@
           console.log("⚠️ Div not found!");
         }
     }
+    // Add these functions to your Tampermonkey script
+
+// Debug function to log shadow DOM structure
+function debugShadowDOM() {
+  console.log('=== SHADOW DOM DEBUG INFO ===');
+  
+  // Check common Reddit components
+  const components = [
+    'devvit-post-consume-tracker',
+    'shreddit-app',
+    'shreddit-post',
+    'faceplate-tracker',
+    'shreddit-devvit-ui-loader',
+    'devvit-surface',
+    'devvit-blocks-renderer'
+  ];
+  
+  components.forEach(component => {
+    const elements = document.querySelectorAll(component);
+    console.log(`Found ${elements.length} ${component} elements`);
+    
+    elements.forEach((el, index) => {
+      console.log(`${component}[${index}]:`, el);
+      if (el.shadowRoot) {
+        console.log(`  ↳ Has shadow root`);
+        // Log important elements in the shadow root
+        const buttons = el.shadowRoot.querySelectorAll('button, img, a');
+        console.log(`  ↳ Found ${buttons.length} interactive elements in shadow root`);
+      }
+    });
+  });
+}
+
+// Function to help click elements in shadow DOM from Tampermonkey
+function clickShadowDOMElement(selector) {
+  function findInShadowRoot(root, sel) {
+    const element = root.querySelector(sel);
+    if (element) return element;
+    
+    const allElements = root.querySelectorAll('*');
+    for (const el of allElements) {
+      if (el.shadowRoot) {
+        const found = findInShadowRoot(el.shadowRoot, sel);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  
+  // Check regular DOM first
+  const regularElement = document.querySelector(selector);
+  if (regularElement) {
+    regularElement.click();
+    return true;
+  }
+  
+  // Check all shadow roots
+  const allElements = document.querySelectorAll('*');
+  for (const element of allElements) {
+    if (element.shadowRoot) {
+      const shadowElement = findInShadowRoot(element.shadowRoot, selector);
+      if (shadowElement) {
+        shadowElement.click();
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+// Call this at the start of your script
+debugShadowDOM();
       
     // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
