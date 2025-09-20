@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SwordAndSupper Autoplay (selenium helper)
+// @name         SwordAndSupper Autoplay (selenium helper with tampermonkey integration)
 // @namespace    http://tampermonkey.net/
 // @version      0.0.7
 // @description  Automatically clicks through the map with no user prompt
