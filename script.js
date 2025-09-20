@@ -216,7 +216,7 @@ function findAndClickStartMission() {
         $(".continue-button").click();
         // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
         setTimeout(clickEndMission,500)
-        setTimeout(startMission, 2500);
+        //setTimeout(startMission, 2500);
       }
       $(".skill-button").click();
       $(".skip-button").click();
