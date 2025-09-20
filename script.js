@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SwordAndSupper Autoplay (selenium helper)
 // @namespace    http://tampermonkey.net/
-// @version      0.0.6
+// @version      0.0.7
 // @description  Automatically clicks through the map with no user prompt
 // @author       u/Aizbaer (original), br0k3nglass (mod), rewritten by ChatGPT
 // @match        https://*.devvit.net/index.html*
@@ -137,51 +137,51 @@
     // end of setTimeout chain functions
 
     // haven't tested this yet but it might be useful for clicking the Start Mission button on the reddit page
-function findAndClickStartMission() {
-    console.log('Starting findAndClickStartMission...');
-    
-    // Find all potential containers
-    $('devvit-post-consume-tracker').each(function(index) {
-        console.log(`Checking container #${index}`, this);
+    function findAndClickStartMission() {
+        console.log('Starting findAndClickStartMission...');
         
-        const loader = this.querySelector('shreddit-devvit-ui-loader');
-        if (!loader?.shadowRoot) {
-            console.log('  No loader or shadowRoot found, skipping...');
-            return true; // continue
-        }
-        console.log('  Found loader with shadowRoot', loader);
+        // Find all potential containers
+        $('devvit-post-consume-tracker').each(function(index) {
+            console.log(`Checking container #${index}`, this);
+            
+            const loader = this.querySelector('shreddit-devvit-ui-loader');
+            if (!loader?.shadowRoot) {
+                console.log('  No loader or shadowRoot found, skipping...');
+                return true; // continue
+            }
+            console.log('  Found loader with shadowRoot', loader);
+            
+            const surface = loader.shadowRoot.querySelector('devvit-surface');
+            if (!surface?.shadowRoot) {
+                console.log('  No surface or shadowRoot found, skipping...');
+                return true;
+            }
+            console.log('  Found surface with shadowRoot', surface);
+            
+            const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
+            if (!renderer?.shadowRoot) {
+                console.log('  No renderer or shadowRoot found, skipping...');
+                return true;
+            }
+            console.log('  Found renderer with shadowRoot', renderer);
+            
+            // Use jQuery in the final shadow root
+            const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
+            console.log(`  Found ${$target.length} target(s) in renderer shadowRoot`);
+            
+            if ($target.length) {
+                $target
+                    .css('border', '2px solid green')
+                    .click(); // jQuery click
+                console.log('  Clicked target with jQuery!');
+                return false; // break the loop
+            } else {
+                console.log('  No target found in this renderer.');
+            }
+        });
         
-        const surface = loader.shadowRoot.querySelector('devvit-surface');
-        if (!surface?.shadowRoot) {
-            console.log('  No surface or shadowRoot found, skipping...');
-            return true;
-        }
-        console.log('  Found surface with shadowRoot', surface);
-        
-        const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
-        if (!renderer?.shadowRoot) {
-            console.log('  No renderer or shadowRoot found, skipping...');
-            return true;
-        }
-        console.log('  Found renderer with shadowRoot', renderer);
-        
-        // Use jQuery in the final shadow root
-        const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
-        console.log(`  Found ${$target.length} target(s) in renderer shadowRoot`);
-        
-        if ($target.length) {
-            $target
-                .css('border', '2px solid green')
-                .click(); // jQuery click
-            console.log('  Clicked target with jQuery!');
-            return false; // break the loop
-        } else {
-            console.log('  No target found in this renderer.');
-        }
-    });
-    
-    console.log('findAndClickStartMission finished.');
-}
+        console.log('findAndClickStartMission finished.');
+    }
 
     function clickEndMission() {
         const $elements = $(".end-mission-button");
@@ -194,7 +194,19 @@ function findAndClickStartMission() {
         } else {
           console.log("⚠️ No matching elements found.");
         }
+        
+        // Signal Selenium IDE that we're done with this mission
+        signalMissionComplete();
+        
         setTimeout(clickFirstMission,500)
+    }
+
+    // Function to signal mission completion to Selenium IDE
+    function signalMissionComplete() {
+        // Use localStorage to communicate with Selenium
+        localStorage.setItem('tmMissionComplete', 'true');
+        localStorage.setItem('tmMissionCompleteTime', new Date().getTime());
+        console.log("🚦 Signaled mission completion to Selenium IDE");
     }
 
     function clickFirstMission() {
@@ -261,5 +273,4 @@ function findAndClickStartMission() {
   } else {
     waitForjQueryAndStart();
   }
-
 })();
