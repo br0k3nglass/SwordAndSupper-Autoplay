@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         SwordAndSupper Autoplay
+// @name         SwordAndSupper Autoplay (Dual Mode)
 // @namespace    http://tampermonkey.net/
-// @version      0.0.5
-// @description  Automatically clicks through the map with a start/cancel prompt
-// @author       u/Aizbaer (original author), br0k3nglass (updated code)
+// @version      0.0.7
+// @description  Automatically clicks through the map with mode selection
+// @author       u/Aizbaer (original), br0k3nglass (mod), combined by ChatGPT
 // @match        https://*.devvit.net/index.html*
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @require      https://git.io/waitForKeyElements.js
@@ -18,8 +18,8 @@
 (function () {
   'use strict';
 
-  // --- Confirmation Dialog ---
-  function createConfirmDialog() {
+  // --- Mode Selection Dialog ---
+  function createModeSelectionDialog() {
     const overlay = document.createElement('div');
     overlay.style.cssText = `
       position: fixed;
@@ -39,7 +39,7 @@
       background: #1a1a1a;
       border-radius: 10px;
       padding: 20px;
-      max-width: 400px;
+      max-width: 500px;
       width: 90%;
       text-align: center;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
@@ -54,7 +54,7 @@
     `;
 
     const question = document.createElement('p');
-    question.textContent = 'Start Autoplay script?';
+    question.textContent = 'Select Autoplay Mode:';
     question.style.cssText = `
       margin: 0 0 25px 0;
       font-size: 16px;
@@ -62,25 +62,17 @@
       line-height: 1.4;
     `;
 
-    const warning = document.createElement('p');
-    warning.textContent = 'The script will automatically click the first button on each screen and open a new map after finishing.';
-    warning.style.cssText = `
-      margin: 0 0 25px 0;
-      font-size: 14px;
-      color: #ffa500;
-      font-style: italic;
-    `;
-
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
       display: flex;
-      gap: 20px;
+      flex-direction: column;
+      gap: 15px;
       justify-content: center;
     `;
 
-    const yesButton = document.createElement('button');
-    yesButton.textContent = 'Start that map!';
-    yesButton.style.cssText = `
+    const newMapButton = document.createElement('button');
+    newMapButton.textContent = 'Create New Map (Uses Map Item)';
+    newMapButton.style.cssText = `
       background: linear-gradient(135deg, #e94560, #f27121);
       color: white;
       border: none;
@@ -92,18 +84,41 @@
       transition: all 0.3s ease;
       box-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
     `;
-    yesButton.addEventListener('mouseover', () => {
-      yesButton.style.transform = 'translateY(-2px)';
-      yesButton.style.boxShadow = '0 4px 20px rgba(233, 69, 96, 0.4)';
+    newMapButton.addEventListener('mouseover', () => {
+      newMapButton.style.transform = 'translateY(-2px)';
+      newMapButton.style.boxShadow = '0 4px 20px rgba(233, 69, 96, 0.4)';
     });
-    yesButton.addEventListener('mouseout', () => {
-      yesButton.style.transform = 'translateY(0)';
-      yesButton.style.boxShadow = '0 2px 10px rgba(233, 69, 96, 0.3)';
+    newMapButton.addEventListener('mouseout', () => {
+      newMapButton.style.transform = 'translateY(0)';
+      newMapButton.style.boxShadow = '0 2px 10px rgba(233, 69, 96, 0.3)';
     });
 
-    const noButton = document.createElement('button');
-    noButton.textContent = 'Wait, I have to crosspost this first';
-    noButton.style.cssText = `
+    const playNextButton = document.createElement('button');
+    playNextButton.textContent = 'Play Next Map (Uses Play Next Button)';
+    playNextButton.style.cssText = `
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 10px rgba(78, 84, 200, 0.3);
+    `;
+    playNextButton.addEventListener('mouseover', () => {
+      playNextButton.style.transform = 'translateY(-2px)';
+      playNextButton.style.boxShadow = '0 4px 20px rgba(78, 84, 200, 0.4)';
+    });
+    playNextButton.addEventListener('mouseout', () => {
+      playNextButton.style.transform = 'translateY(0)';
+      playNextButton.style.boxShadow = '0 2px 10px rgba(78, 84, 200, 0.3)';
+    });
+
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.cssText = `
       background: linear-gradient(135deg, #6c757d, #495057);
       color: white;
       border: none;
@@ -115,40 +130,45 @@
       transition: all 0.3s ease;
       box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
     `;
-    noButton.addEventListener('mouseover', () => {
-      noButton.style.transform = 'translateY(-2px)';
-      noButton.style.boxShadow = '0 4px 20px rgba(108, 117, 125, 0.4)';
+    cancelButton.addEventListener('mouseover', () => {
+      cancelButton.style.transform = 'translateY(-2px)';
+      cancelButton.style.boxShadow = '0 4px 20px rgba(108, 117, 125, 0.4)';
     });
-    noButton.addEventListener('mouseout', () => {
-      noButton.style.transform = 'translateY(0)';
-      noButton.style.boxShadow = '0 2px 10px rgba(108, 117, 125, 0.3)';
+    cancelButton.addEventListener('mouseout', () => {
+      cancelButton.style.transform = 'translateY(0)';
+      cancelButton.style.boxShadow = '0 2px 10px rgba(108, 117, 125, 0.3)';
     });
 
     return new Promise((resolve) => {
-      yesButton.addEventListener('click', () => {
+      newMapButton.addEventListener('click', () => {
         document.body.removeChild(overlay);
-        resolve(true);
+        resolve('new-map');
       });
 
-      noButton.addEventListener('click', () => {
+      playNextButton.addEventListener('click', () => {
         document.body.removeChild(overlay);
-        resolve(false);
+        resolve('play-next');
+      });
+
+      cancelButton.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(null);
       });
 
       const handleKeydown = (e) => {
         if (e.key === 'Escape') {
           document.removeEventListener('keydown', handleKeydown);
           document.body.removeChild(overlay);
-          resolve(false);
+          resolve(null);
         }
       };
       document.addEventListener('keydown', handleKeydown);
 
-      buttonContainer.appendChild(yesButton);
-      buttonContainer.appendChild(noButton);
+      buttonContainer.appendChild(newMapButton);
+      buttonContainer.appendChild(playNextButton);
+      buttonContainer.appendChild(cancelButton);
       dialog.appendChild(title);
       dialog.appendChild(question);
-      dialog.appendChild(warning);
       dialog.appendChild(buttonContainer);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -156,10 +176,10 @@
   }
 
   // --- Autoplay Logic ---
-  function executeAutoplayScript() {
+  function executeAutoplayScript(mode) {
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // these functions are part of a setTimeout chain used for opening inventory, selecting a map, and creating/naming a new mission
+    // Functions for new map mode
     function clickInventory() {
       $(".navi-bar").find(".image-icon").last().click();
       setTimeout(goToMapTab, 500);
@@ -204,7 +224,105 @@
       $(".mission-create-submit-button").click();
       setTimeout(nameMission, 500);
     }
-    
+
+    function clickSubmitYetAgain() {
+      $(".mission-create-submit-button").click();
+      setTimeout(nameMission, 500);
+    }
+
+    function startMission() {
+      console.log('Starting startMission...');
+      let tryCount = 0;
+      const interval = setInterval(() => {
+        tryCount++;
+        console.log(`Attempt #${tryCount} to find and click Start Mission...`);
+
+        const result = findAndClickStartMission();
+
+        if (result === false) {
+            console.log('Success: Start Mission was clicked. Stopping attempts.');
+            clearInterval(interval);
+        } else if (tryCount >= 12) {
+            console.log('Reached maximum attempts (12). Stopping attempts.');
+            clearInterval(interval);
+        } else {
+            console.log('Start Mission not found yet, will retry in 1 second...');
+        }
+      }, 1000);
+    }
+
+    // Functions for play next mode
+    function clickEndMission() {
+        const $elements = $(".end-mission-button");
+        if ($elements.length === 1) {
+          $elements.eq(0).click();//click first (only) one
+          console.log("✅ Clicked the first (only) element!");
+        } else if ($elements.length >= 2) {
+          $elements.eq(1).click();//click the second one
+          console.log("✅ Clicked the second element out of", $elements.length);
+        } else {
+          console.log("⚠️ No matching elements found.");
+        }
+        setTimeout(clickFirstMission,500)
+    }
+
+    function clickFirstMission() {
+        const $div = $(".mission-link-item").first();
+        const link = $div.find("a")[0]; //get raw DOM element for clicking
+        if (link) {
+          link.click();
+          console.log("✅ Clicked the link inside the div!");
+        } else {
+          console.log("⚠️ Div not found!");
+        }
+    }
+
+    function findAndClickStartMission() {
+        console.log('Starting findAndClickStartMission...');
+        
+        // Find all potential containers
+        $('devvit-post-consume-tracker').each(function(index) {
+            console.log(`Checking container #${index}`, this);
+            
+            const loader = this.querySelector('shreddit-devvit-ui-loader');
+            if (!loader?.shadowRoot) {
+                console.log('  No loader or shadowRoot found, skipping...');
+                return true; // continue
+            }
+            console.log('  Found loader with shadowRoot', loader);
+            
+            const surface = loader.shadowRoot.querySelector('devvit-surface');
+            if (!surface?.shadowRoot) {
+                console.log('  No surface or shadowRoot found, skipping...');
+                return true;
+            }
+            console.log('  Found surface with shadowRoot', surface);
+            
+            const renderer = surface.shadowRoot.querySelector('devvit-blocks-renderer');
+            if (!renderer?.shadowRoot) {
+                console.log('  No renderer or shadowRoot found, skipping...');
+                return true;
+            }
+            console.log('  Found renderer with shadowRoot', renderer);
+            
+            // Use jQuery in the final shadow root
+            const $target = $(renderer.shadowRoot).find('div[style*="3kg6d3isvyre1.png"]');
+            console.log(`  Found ${$target.length} target(s) in renderer shadowRoot`);
+            
+            if ($target.length) {
+                $target
+                    .css('border', '2px solid green')
+                    .click(); // jQuery click
+                console.log('  Clicked target with jQuery!');
+                return false; // break the loop
+            } else {
+                console.log('  No target found in this renderer.');
+            }
+        });
+        
+        console.log('findAndClickStartMission finished.');
+    }
+
     function nameMission() {
       const spans = $(".mission-create-summary").eq(1).find("span");
       let stars = 0;
@@ -244,44 +362,51 @@
       });
 
       console.log("[Tampermonkey] Value after change:", inputElement.value);
+      
+      if (mode === 'new-map') {
+        setTimeout(clickSubmitYetAgain, 500);
+      }
     }
-    // end of setTimeout chain functions
-    
 
     // the main auto-clicking loop (runs every 1 second)
     function myLoopFunction() {
       const end = $(".overlay-screen.mission-end-screen");
-      // checks if the mission has ended:
-      // if 'end' exists, stops the loop via clearInterval, clicks Continue, and Dismiss, then reopens the inventory to start a new map
+      
       if (end.length) {
         clearInterval(intervalId);
         $(".continue-button").click();
-        $(".dismiss-button").click();
-        setTimeout(clickInventory, 500);
+        
+        if (mode === 'new-map') {
+          $(".dismiss-button").click();
+          setTimeout(clickInventory, 500);
+        } else if (mode === 'play-next') {
+          setTimeout(clickEndMission, 500);
+          setTimeout(startMission, 2500);
+        }
       }
-      // if the mission is not over, attempt to click these three kinds of buttons automatically to progress through the mission
+      
       $(".skill-button").click();
       $(".skip-button").click();
       $(".advance-button").click();
     }
 
-    // this is the line which triggers the auto-clicker to run every 1 second
+    // start the loop
     const intervalId = setInterval(myLoopFunction, 1000);
-    console.log("Supper Autoplay Script has been started!");
+    console.log(`Supper Autoplay Script has been started in ${mode} mode!`);
   }
 
   // --- Main Logic ---
   async function main() {
-    // waits until jquery ($) is available, then displays a confirmation dialog (createConfirmDialog())
     if (typeof $ === "undefined") {
       setTimeout(main, 100);
       return;
     }
-    const userConfirmed = await createConfirmDialog();
-    // if the user clicks "Start", run the automation logic in executeAutoplayScript()
-    if (userConfirmed) {
-      console.log("Autoplay Script is started...");
-      executeAutoplayScript();
+    
+    const selectedMode = await createModeSelectionDialog();
+    
+    if (selectedMode) {
+      console.log(`Autoplay Script is started in ${selectedMode} mode...`);
+      executeAutoplayScript(selectedMode);
     } else {
       console.log("Autoplay Script has been canceled by the user.");
     }
@@ -292,5 +417,4 @@
   } else {
     main();
   }
-
 })();
