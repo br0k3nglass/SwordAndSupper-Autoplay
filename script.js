@@ -218,7 +218,25 @@ function findAndClickStartMission() {
         setTimeout(clickEndMission,500)
         //setTimeout(startMission, 2500);
       }
-      $(".skill-button").click();
+      
+      // Modified skill button logic to prefer "Refuse" button
+      const $skillButtons = $(".skill-button");
+      if ($skillButtons.length > 0) {
+        let buttonToClick = $skillButtons.first(); // Default to first button
+        
+        // Look for a button containing "Refuse" text
+        $skillButtons.each(function() {
+          const buttonText = $(this).text().trim();
+          if (buttonText.includes("Refuse")) {
+            buttonToClick = $(this);
+            console.log("✅ Found and selecting 'Refuse' button");
+            return false; // Break out of the each loop
+          }
+        });
+        
+        buttonToClick.click();
+      }
+      
       $(".skip-button").click();
       $(".advance-button").click();
     }
