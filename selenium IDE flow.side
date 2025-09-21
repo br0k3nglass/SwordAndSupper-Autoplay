@@ -1,0 +1,207 @@
+{
+  "id": "sword-and-supper-automation-v4",
+  "version": "2.0",
+  "name": "SwordAndSupper Automation - Selenium IDE v4",
+  "url": "https://www.reddit.com",
+  "tests": [
+    {
+      "id": "main-flow",
+      "name": "Main Automation Flow",
+      "commands": [
+        {
+          "command": "executeScript",
+          "target": "window.automationCompleted = false; window.currentIteration = 0;",
+          "value": ""
+        },
+        {
+          "command": "executeScript",
+          "target": "window.currentIteration = (window.currentIteration || 0) + 1; console.log('▶ Starting iteration', window.currentIteration); return window.currentIteration;",
+          "value": "iteration"
+        },
+        {
+          "command": "open",
+          "target": "https://www.reddit.com/r/SwordAndSupperGame/?f=flair_name%3A%22Level%2061-80%22"
+        },
+        {
+          "command": "executeScript",
+          "target": "var start = Date.now(); var maxWait = 30000; while (Date.now() - start < maxWait) { if (document.querySelector('[data-testid=\"post-container\"], article, a[href*=\"/comments/\"]')) return true; } return false;",
+          "value": "redditLoaded"
+        },
+        {
+          "command": "if",
+          "target": "${redditLoaded} == true"
+        },
+        {
+          "command": "echo",
+          "target": "✅ Page loaded successfully — looking for unvisited posts..."
+        },
+        {
+          "command": "else"
+        },
+        {
+          "command": "echo",
+          "target": "❌ Page failed to load — refreshing and retrying."
+        },
+        {
+          "command": "refresh"
+        },
+        {
+          "command": "executeScript",
+          "target": "var d = Math.floor(Math.random()*3000)+2000; return d;",
+          "value": "retryDelay"
+        },
+        {
+          "command": "pause",
+          "target": "${retryDelay}"
+        },
+        {
+          "command": "run",
+          "target": "main-flow"
+        },
+        {
+          "command": "end"
+        },
+        {
+          "command": "executeScript",
+          "target": "var visitedLinks = JSON.parse(localStorage.getItem('visitedSwordSupperLinks') || '{}'); var posts = document.querySelectorAll('[data-testid=\"post-container\"] a[href*=\"/comments/\"]'); if (posts.length === 0) posts = document.querySelectorAll('article a[href*=\"/comments/\"]'); if (posts.length === 0) posts = document.querySelectorAll('a[href*=\"/comments/\"]'); for (var i = 0; i < posts.length; i++) { var href = posts[i].href; if (!visitedLinks[href]) return href; } return null;",
+          "value": "postUrl"
+        },
+        {
+          "command": "if",
+          "target": "${postUrl} != null && ${postUrl} != 'null' && ${postUrl} != 'undefined'"
+        },
+        {
+          "command": "echo",
+          "target": "🟢 Found new post: ${postUrl}"
+        },
+        {
+          "command": "open",
+          "target": "${postUrl}"
+        },
+        {
+          "command": "waitForElementPresent",
+          "target": "css=shreddit-app",
+          "value": "30000"
+        },
+        {
+          "command": "executeScript",
+          "target": "var visitedLinks = JSON.parse(localStorage.getItem('visitedSwordSupperLinks') || '{}'); visitedLinks['${postUrl}'] = true; localStorage.setItem('visitedSwordSupperLinks', JSON.stringify(visitedLinks));"
+        },
+        {
+          "command": "executeScript",
+          "target": "function findImageInShadow(root) {\n  const images = root.querySelectorAll('img');\n  for (let img of images) if (img.src.includes('3kg6d3isvyre1.png')) return img;\n  const shadowHosts = root.querySelectorAll('*');\n  for (let host of shadowHosts) {\n    if (host.shadowRoot) {\n      const found = findImageInShadow(host.shadowRoot);\n      if (found) return found;\n    }\n  }\n  return null;\n}\n\nvar start = Date.now(); var maxWait = 30000; var target = null;\nwhile(Date.now() - start < maxWait) {\n  target = findImageInShadow(document);\n  if(target) break;\n  var end = Date.now() + 500; while(Date.now() < end){}\n}\nreturn target;",
+          "value": "targetImage"
+        },
+        {
+          "command": "if",
+          "target": "${targetImage} != null"
+        },
+        {
+          "command": "executeScript",
+          "target": "${targetImage}.click(); console.log('✅ Clicked target image.')"
+        },
+        {
+          "command": "executeScript",
+          "target": "var start = Date.now(); var maxWait = 60000; var iframeFound = null;\nwhile(Date.now() - start < maxWait) {\n  iframeFound = document.querySelector(\"iframe[src*='devvit.net']\");\n  if(iframeFound) break;\n  var end = Date.now() + 500; while(Date.now() < end){}\n}\nreturn iframeFound;",
+          "value": "devvitFrame"
+        },
+        {
+          "command": "selectFrame",
+          "target": "${devvitFrame}"
+        },
+        {
+          "command": "executeScript",
+          "target": "var start = Date.now(); var maxWait = 300000; while(Date.now() - start < maxWait){ if(window.automationCompleted===true){ window.automationCompleted=false; return true; } } return false;",
+          "value": "completionStatus"
+        },
+        {
+          "command": "if",
+          "target": "${completionStatus} == true"
+        },
+        {
+          "command": "echo",
+          "target": "✅ Tampermonkey automation completed successfully."
+        },
+        {
+          "command": "else"
+        },
+        {
+          "command": "echo",
+          "target": "⚠ Tampermonkey script timed out. Continuing anyway."
+        },
+        {
+          "command": "end"
+        },
+        {
+          "command": "selectFrame",
+          "target": "relative=parent"
+        },
+        {
+          "command": "executeScript",
+          "target": "var d = Math.floor(Math.random()*3000)+2000; return d;",
+          "value": "loopDelay"
+        },
+        {
+          "command": "pause",
+          "target": "${loopDelay}"
+        },
+        {
+          "command": "run",
+          "target": "main-flow"
+        },
+        {
+          "command": "else"
+        },
+        {
+          "command": "echo",
+          "target": "🔴 No target image found — waiting before retry."
+        },
+        {
+          "command": "executeScript",
+          "target": "var d = Math.floor(Math.random()*3000)+2000; return d;",
+          "value": "retryDelay2"
+        },
+        {
+          "command": "pause",
+          "target": "${retryDelay2}"
+        },
+        {
+          "command": "run",
+          "target": "main-flow"
+        },
+        {
+          "command": "end"
+        },
+        {
+          "command": "else"
+        },
+        {
+          "command": "echo",
+          "target": "⛔ No unvisited posts found — stopping automation."
+        },
+        {
+          "command": "break"
+        },
+        {
+          "command": "end"
+        }
+      ]
+    }
+  ],
+  "suites": [
+    {
+      "id": "default-suite",
+      "name": "Default Suite",
+      "persistSession": true,
+      "parallel": false,
+      "timeout": 300,
+      "tests": ["main-flow"]
+    }
+  ],
+  "urls": [
+    "https://www.reddit.com/",
+    "https://www.reddit.com/r/SwordAndSupperGame/",
+    "https://*.devvit.net/"
+  ],
+  "plugins": []
+}
