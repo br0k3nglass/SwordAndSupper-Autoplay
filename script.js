@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SwordAndSupper Autoplay (selenium helper with tampermonkey integration)
+// @name         SwordAndSupper Autoplay (selenium helper)
 // @namespace    http://tampermonkey.net/
 // @version      0.0.7
 // @description  Automatically clicks through the map with no user prompt
@@ -16,6 +16,19 @@
 
 (function () {
   'use strict';
+
+  // --- Communication with Selenium ---
+  function notifySeleniumCompletion() {
+    try {
+      // Try to access parent window (Selenium context)
+      if (window.parent && window.parent.automationCompleted !== undefined) {
+        window.parent.automationCompleted = true;
+        console.log("[Tampermonkey] Notified Selenium of completion");
+      }
+    } catch (e) {
+      console.log("[Tampermonkey] Could not communicate with parent window:", e.message);
+    }
+  }
 
   // --- Autoplay Logic ---
   function executeAutoplayScript() {
@@ -186,122 +199,29 @@
     function clickEndMission() {
         const $elements = $(".end-mission-button");
         if ($elements.length === 1) {
-          $elements.eq(0).click();//click first (only) one
+          $elements.eq(0).click();
           console.log("✅ Clicked the first (only) element!");
         } else if ($elements.length >= 2) {
-          $elements.eq(1).click();//click the second one
+          $elements.eq(1).click();
           console.log("✅ Clicked the second element out of", $elements.length);
         } else {
           console.log("⚠️ No matching elements found.");
         }
         
-        // Signal Selenium IDE that we're done with this mission
-        signalMissionComplete();
-        
-        setTimeout(clickFirstMission,500)
+        // Notify Selenium that we're done
+        setTimeout(() => {
+            notifySeleniumCompletion();
+            clickFirstMission();
+        }, 500);
     }
 
-    // Function to signal mission completion to Selenium IDE
-    function signalMissionComplete() {
-        // Use localStorage to communicate with Selenium
-        localStorage.setItem('tmMissionComplete', 'true');
-        localStorage.setItem('tmMissionCompleteTime', new Date().getTime());
-        console.log("🚦 Signaled mission completion to Selenium IDE");
-    }
-
-    function clickFirstMission() {
-        const $div = $(".mission-link-item").first();
-        const link = $div.find("a")[0]; //get raw DOM element for clicking
-        if (link) {
-          link.click();
-          console.log("✅ Clicked the link inside the div!");
-        } else {
-          console.log("⚠️ Div not found!");
-        }
-    }
-    // Add these functions to your Tampermonkey script
-
-// Debug function to log shadow DOM structure
-function debugShadowDOM() {
-  console.log('=== SHADOW DOM DEBUG INFO ===');
-  
-  // Check common Reddit components
-  const components = [
-    'devvit-post-consume-tracker',
-    'shreddit-app',
-    'shreddit-post',
-    'faceplate-tracker',
-    'shreddit-devvit-ui-loader',
-    'devvit-surface',
-    'devvit-blocks-renderer'
-  ];
-  
-  components.forEach(component => {
-    const elements = document.querySelectorAll(component);
-    console.log(`Found ${elements.length} ${component} elements`);
-    
-    elements.forEach((el, index) => {
-      console.log(`${component}[${index}]:`, el);
-      if (el.shadowRoot) {
-        console.log(`  ↳ Has shadow root`);
-        // Log important elements in the shadow root
-        const buttons = el.shadowRoot.querySelectorAll('button, img, a');
-        console.log(`  ↳ Found ${buttons.length} interactive elements in shadow root`);
-      }
-    });
-  });
-}
-
-// Function to help click elements in shadow DOM from Tampermonkey
-function clickShadowDOMElement(selector) {
-  function findInShadowRoot(root, sel) {
-    const element = root.querySelector(sel);
-    if (element) return element;
-    
-    const allElements = root.querySelectorAll('*');
-    for (const el of allElements) {
-      if (el.shadowRoot) {
-        const found = findInShadowRoot(el.shadowRoot, sel);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-  
-  // Check regular DOM first
-  const regularElement = document.querySelector(selector);
-  if (regularElement) {
-    regularElement.click();
-    return true;
-  }
-  
-  // Check all shadow roots
-  const allElements = document.querySelectorAll('*');
-  for (const element of allElements) {
-    if (element.shadowRoot) {
-      const shadowElement = findInShadowRoot(element.shadowRoot, selector);
-      if (shadowElement) {
-        shadowElement.click();
-        return true;
-      }
-    }
-  }
-  
-  return false;
-}
-
-// Call this at the start of your script
-debugShadowDOM();
-      
-    // the main auto-clicking loop (runs every 1 second)
+    // the main auto-clicking loop
     function myLoopFunction() {
       const end = $(".overlay-screen.mission-end-screen");
       if (end.length) {
         clearInterval(intervalId);
         $(".continue-button").click();
-        // if you have maps in your inventory there will be two end-mission-buttons, otherwise there will only be one
-        setTimeout(clickEndMission,500)
-        //setTimeout(startMission, 2500);
+        setTimeout(clickEndMission, 500);
       }
       
       // Modified skill button logic to prefer "Refuse" button
@@ -324,7 +244,7 @@ debugShadowDOM();
       
       $(".skip-button").click();
       $(".advance-button").click();
-    }
+    }   
 
     // start the loop
     const intervalId = setInterval(myLoopFunction, 1000);
@@ -346,4 +266,5 @@ debugShadowDOM();
   } else {
     waitForjQueryAndStart();
   }
+
 })();
