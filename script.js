@@ -214,7 +214,18 @@
             clickFirstMission();
         }, 500);
     }
-
+    
+    function clickFirstMission() {
+        const $div = $(".mission-link-item").first();
+        const link = $div.find("a")[0]; //get raw DOM element for clicking
+        if (link) {
+          link.click();
+          console.log("✅ Clicked the link inside the div!");
+        } else {
+          console.log("⚠️ Div not found!");
+        }
+    }
+    
     // the main auto-clicking loop
     function myLoopFunction() {
       const end = $(".overlay-screen.mission-end-screen");
