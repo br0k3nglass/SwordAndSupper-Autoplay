@@ -1,0 +1,408 @@
+const { chromium } = require("playwright");
+const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
+
+// ----------------- Configuration -----------------
+const SUBREDDIT = "SwordAndSupperGame";
+const FLAIR = "Level 241-260";
+//const SUBREDDIT = "SwordAndSupper";
+//const FLAIR = "☠️🐄🍄| Mini Boss";
+//const FLAIR = "BOSS RUSH | LVL 201 - 300 | 👹👹👹";          
+//const FLAIR = "BOSS RUSH | LVL 101 - 200 | 👹👹👹";
+//const FLAIR = "BOSS RUSH | LVL 41 - 100 |  👹👹👹";
+//const FLAIR = "🤖 Slumbering Guardian-X5 🤖";
+//const FLAIR = "🍄 Boss Mushroom 🍄";
+
+const MAX_COUNT = 250;
+const PAGE_SIZE = 100;
+const VISITED_FILE = path.join(__dirname, "visited.json");
+
+const START_MISSION = "3kg6d3isvyre1.png"; // Start Mission button image
+const GO_TO_INN = "fxlui9egtgbf1.png";     // Go To Inn button image
+
+// ----------------- Helper Functions -----------------
+function loadVisited() {
+  try {
+    const data = fs.readFileSync(VISITED_FILE, "utf8");
+    return new Set(JSON.parse(data));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveVisited(visitedSet) {
+  fs.writeFileSync(VISITED_FILE, JSON.stringify([...visitedSet], null, 2));
+}
+
+const visited = loadVisited();
+
+// Fetch newest posts from Reddit API
+async function getPostUrls() {
+  let results = [];
+  let after = null;
+
+  while (results.length < MAX_COUNT) {
+    const apiUrl = new URL(`https://www.reddit.com/r/${SUBREDDIT}/search.json`);
+    apiUrl.searchParams.set("q", `flair:"${FLAIR}"`);
+    apiUrl.searchParams.set("restrict_sr", "on");
+    apiUrl.searchParams.set("sort", "new");
+    apiUrl.searchParams.set("limit", PAGE_SIZE.toString());
+    if (after) apiUrl.searchParams.set("after", after);
+
+    console.log(`Fetching: ${apiUrl.href}`);
+    //const response = await fetch(apiUrl.href);
+	  const response = await redditFetch(apiUrl.href);
+
+    if (!response.ok) throw new Error(`Failed to fetch posts: ${response.status}`);
+
+    const json = await response.json();
+    const batch = json.data.children;
+
+    if (batch.length === 0) break;
+
+    for (const post of batch) {
+      const id = post.data.id;
+      if (!visited.has(id)) {
+        results.push({
+          id,
+          url: `https://reddit.com${post.data.permalink}`,
+        });
+      }
+    }
+
+    after = json.data.after;
+    if (!after) break;
+  }
+
+  return results.slice(0, MAX_COUNT);
+}
+
+// --- attempt to get the top leftmost coordinates of the second monitor
+function getSecondaryMonitorTopLeft() {
+  try {
+    const output = execSync("xrandr --query").toString();
+
+    // Parse all connected monitors
+    const monitors = output
+      .split("\n")
+      .filter(line => line.includes(" connected "))
+      .map(line => {
+        const primary = line.includes(" primary");
+        const match = line.match(/\+(\d+)\+(\d+)/); // +X+Y
+        if (match) {
+          return {
+            x: parseInt(match[1], 10),
+            y: parseInt(match[2], 10),
+            primary
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    // Find the first non-primary monitor
+    const secondary = monitors.find(m => !m.primary);
+    if (!secondary) {
+      console.warn("No secondary monitor detected. Using primary monitor.");
+      return { x: 0, y: 0 };
+    }
+
+    return { x: secondary.x, y: secondary.y };
+  } catch (err) {
+    console.error("Error detecting monitors:", err);
+    return { x: 0, y: 0 };
+  }
+}
+
+// --- Optimized Shadow DOM Button Finder ---
+async function findMissionButton(page) {
+  // Run inside page context
+  const elements = await page.evaluateHandle(() => {
+    function findInShadowRoots(root) {
+      const results = [];
+      function traverse(node) {
+        if (!node) return;
+
+        // If this is a clickable mission div
+        if (
+          node.nodeType === 1 &&
+          node.classList?.contains('box-border') &&
+          node.classList?.contains('cursor-pointer')
+        ) {
+          results.push(node);
+        }
+
+        // Dive into shadow DOM
+        if (node.shadowRoot) {
+          node.shadowRoot.querySelectorAll('*').forEach(traverse);
+        }
+
+        // Dive into light DOM
+        if (node.children) {
+          for (const child of node.children) traverse(child);
+        }
+      }
+
+      traverse(root);
+      return results;
+    }
+
+    return findInShadowRoots(document.body);
+  });
+
+  // Convert NodeList handles into actual element handles
+  const properties = await elements.getProperties();
+
+  for (const property of properties.values()) {
+    const elHandle = property.asElement();
+    if (!elHandle) continue;
+
+    const style = await elHandle.evaluate(node => node.getAttribute('style') || '');
+    if (style.includes('3kg6d3isvyre1.png')) {
+      return { type: 'START_MISSION', element: elHandle };
+    }
+    if (style.includes('fxlui9egtgbf1.png')) {
+      return { type: 'GO_TO_INN', element: elHandle };
+    }
+  }
+
+  return null;
+}
+
+// ----------------- Process Single Post -----------------
+async function processPost(post) {
+  console.log(`Visiting: ${post.url}`);
+  visited.add(post.id);
+  saveVisited(visited);
+  const pos = getSecondaryMonitorTopLeft();
+  console.log(`coordinates: ${pos.x},${pos.y}`);
+  const directory = "/home/wagnj1/.config/google-chrome/PlaywrightProfile";
+  const cookies = JSON.parse(fs.readFileSync('cookies.json', 'utf-8'));
+
+  const context = await chromium.launchPersistentContext(directory, {
+    headless: false,
+    channel: 'chrome',
+	args: [
+	    `--window-position=${pos.x},${pos.y}`,
+    	"--window-size=1200,800"
+  	],
+    });
+
+  await context.addCookies(cookies);
+  const page = context.pages()[0];
+  
+  // dump specific messages from browser console to system console
+  page.on("console", async (msg) => {
+    const args = await Promise.all(msg.args().map(a => a.jsonValue()));
+    const text = args.join(" ");
+
+    // Regex to extract JSON-looking content from the message
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const data = JSON.parse(jsonMatch[0]);
+        if (data.Lives !== undefined) {
+          console.log(`[BROWSER] Lives: ${data.Lives}`);
+        }
+      } catch (err) {
+        // Ignore messages that are not valid JSON
+      }
+    }
+
+    // Keep your key phrase handling
+    const KEY_PHRASES = ["Mission completed!", "cleared mission"];
+    if (KEY_PHRASES.some(phrase => text.includes(phrase))) {
+      console.log(`[BROWSER:${msg.type()}] ${text}`);
+    }
+  });
+
+
+
+  
+
+  try {
+    await page.goto(post.url, { waitUntil: "domcontentloaded" });
+    const targets = [START_MISSION];
+    const alternates = [GO_TO_INN];
+    let buttonDiv = null;
+	// log the post title
+	let title = "";  // declare in outer scope
+
+	try {
+	  title = await page.locator("h1").first().textContent();
+	  console.log(`Title: ${title}`);
+	} catch {
+	  console.log("Title not found.");
+	}
+
+	  
+	  // 🔍 Find button via new shadow DOM search
+    let buttonInfo = null;
+    for (let i = 0; i < 10; i++) {
+      buttonInfo = await findMissionButton(page);
+      if (buttonInfo) break;
+      await page.waitForTimeout(500);
+    }
+
+    if (!buttonInfo) {
+      console.log("No START_MISSION or GO_TO_INN button found.");
+      return;
+    }
+
+    if (buttonInfo.type === 'GO_TO_INN') {
+      console.log("GO_TO_INN found. Already visited.");
+	  visited.add(post.id);
+      saveVisited(visited);
+      return;
+    }
+
+    console.log("Found START_MISSION. Clicking...");
+    await buttonInfo.element.scrollIntoViewIfNeeded();
+    await buttonInfo.element.click({ force: true });
+
+    console.log("Clicked START_MISSION button.");
+
+	// Wait for the iframe inside the devvit webview to appear
+	const iframeHandle = await page.waitForSelector(
+	  '#devvit-web-view-dialog devvit-blocks-web-view iframe',
+	  { timeout: 15000 }  // wait up to 15s if needed
+	);
+	const gameFrame = await iframeHandle.contentFrame();
+	if (!gameFrame) throw new Error("Failed to get content frame from devvit iframe");
+
+	// Wait for the frame to finish loading
+	await gameFrame.waitForLoadState();
+	console.log("Devvit game frame is ready:");//, gameFrame.url());
+    /*
+    // 👈 added: forward iframe console logs too
+    if (gameFrame) {
+      gameFrame.page().on("console", async (msg) => {
+        try {
+          const args = await Promise.all(msg.args().map(a => a.jsonValue()));
+          console.log(`[IFRAME:${msg.type()}]`, ...args);
+        } catch (err) {
+          console.error("Error forwarding iframe console message:", err);
+        }
+      });
+    }
+    */
+    // ----------------- Async-Safe Game Loop -----------------
+    const intervalMs = 1000; // 1 second
+    while (true) {
+      try {
+        // Check for mission end overlay
+        const end = await gameFrame.$('.overlay-screen.mission-end-screen');
+        if (end) {
+          console.log("Found end of mission screen. Exiting loop.");
+
+          const continueBtn = await gameFrame.$('.continue-button');
+          if (continueBtn) await continueBtn.click();
+          const dismissBtn = await gameFrame.$('.dismiss-button');
+          if (dismissBtn) await dismissBtn.click();
+          await page.waitForTimeout(6000);
+          break; // exit while loop
+        }
+
+		// click skill button (with priority options)
+		const skillButtons = await gameFrame.$$('.skill-button');
+		if (skillButtons.length > 0) {
+		  let buttonToClick = null;
+
+		  for (const btn of skillButtons) {
+			const text = await btn.textContent();
+			if (text && text.includes("Refuse")) {
+			  buttonToClick = btn;
+			  console.log(`Found priority skill button: "${text.trim()}"`);
+			  break; // Stop searching, we found our preferred one
+			}
+		  }
+
+		  // If no priority button was found, fall back to first
+		  if (!buttonToClick) {
+			buttonToClick = skillButtons[0];
+			const fallbackText = await buttonToClick.textContent();
+			console.log(`No priority button found. Clicking first: "${fallbackText?.trim()}"`);
+		  }
+
+		  await buttonToClick.click();
+		}
+
+        const skipBtn = await gameFrame.$('.skip-button');
+        if (skipBtn) {
+          console.log("Found skip button. Clicking...");
+          await skipBtn.click();
+        }
+
+        const advanceBtn = await gameFrame.$('.advance-button');
+        if (advanceBtn) {
+          console.log("Found advance button. Clicking...");
+          await advanceBtn.click();
+        }
+
+        // Wait for next iteration
+        await gameFrame.waitForTimeout(intervalMs);
+      } catch (err) {
+        console.error("Error in game loop:", err);
+        await page.waitForTimeout(intervalMs); // avoid tight error loop
+      }
+    }
+
+    console.log("Mission loop complete.");
+
+  } catch (err) {
+    console.error(`Error processing ${post.url}:`, err);
+  } finally {
+    await context.close();
+    console.log("Browser context closed.");
+  }
+}
+
+// Create a single, realistic browser UA string
+const USER_AGENT = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${
+  120 + Math.floor(Math.random() * 30)
+}.0.${Math.floor(Math.random() * 5000)}.100 Safari/537.36`;
+
+// Function to fetch Reddit JSON using browser-like headers
+async function redditFetch(url) {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      "Accept": "application/json, text/javascript, */*; q=0.01",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Referer": `https://www.reddit.com/r/${SUBREDDIT}/`,
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin"
+    }
+  });
+  return res;
+}
+
+
+// ----------------- Main Loop -----------------
+(async () => {
+  console.log(`Loaded ${visited.size} previously visited posts.`);
+
+  while (true) {
+    console.log(`Fetching up to ${MAX_COUNT} newest posts with flair "${FLAIR}"...`);
+    const posts = await getPostUrls();
+
+    if (posts.length === 0) {
+      console.log("No new posts found. Waiting 1 minute...");
+      await new Promise(r => setTimeout(r, 60000));
+      continue;
+    }
+
+    console.log(`Found ${posts.length} new posts.`);
+	  
+	for (let i = 0; i < posts.length; i++) {
+  		const remaining = posts.length - i;
+  		console.log(`Processing post ${i + 1}/${posts.length} (${remaining} remaining)...`);
+  		await processPost(posts[i]);
+	}
+  
+    console.log("Finished batch. Restarting...");
+    await new Promise(r => setTimeout(r, 5000));
+  }
+})();
